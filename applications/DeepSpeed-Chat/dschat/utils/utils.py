@@ -72,7 +72,7 @@ class ExponentialMovingAverage:
         return self.ema if self.ema is not None else 0.
 
 
-def get_tokenizer(model_name_or_path, fast_tokenizer=True):
+def get_tokenizer(model_name_or_path, fast_tokenizer=True, trust_remote_code=False):
     if "llama" in model_name_or_path:
         from transformers.models.llama import LlamaTokenizer
         tokenizer = LlamaTokenizer.from_pretrained(
@@ -84,7 +84,7 @@ def get_tokenizer(model_name_or_path, fast_tokenizer=True):
             tokenizer.padding_side = 'right'
     else:
         tokenizer = AutoTokenizer.from_pretrained(
-            model_name_or_path, fast_tokenizer=fast_tokenizer)
+            model_name_or_path, fast_tokenizer=fast_tokenizer, trust_remote_code=trust_remote_code)
         tokenizer.pad_token = tokenizer.eos_token
         # make sure tokenizer is right pad in our logic
         tokenizer.padding_side = 'right'
@@ -93,6 +93,7 @@ def get_tokenizer(model_name_or_path, fast_tokenizer=True):
 
 def load_hf_tokenizer(model_name_or_path,
                       fast_tokenizer=True,
+                      trust_remote_code=False,
                       add_special_tokens=None):
     if os.path.exists(model_name_or_path):
         # Locally tokenizer loading has some issue, so we need to force download
@@ -102,14 +103,17 @@ def load_hf_tokenizer(model_name_or_path,
             model_name = model_json_file.get("_name_or_path",
                                              model_name_or_path)
             tokenizer = get_tokenizer(model_name,
-                                      fast_tokenizer=fast_tokenizer)
+                                      fast_tokenizer=fast_tokenizer,
+                                      trust_remote_code=trust_remote_code)
     else:
         tokenizer = get_tokenizer(model_name_or_path,
-                                  fast_tokenizer=fast_tokenizer)
+                                  fast_tokenizer=fast_tokenizer,
+                                  trust_remote_code=trust_remote_code)
 
     if add_special_tokens is not None:
         add_special_tokens = [add_special_tokens] if isinstance(add_special_tokens, str) \
             else add_special_tokens
+        print(f"add_special_tokens: {add_special_tokens}")
         tokenizer.add_special_tokens(
             {'additional_special_tokens': add_special_tokens})
 

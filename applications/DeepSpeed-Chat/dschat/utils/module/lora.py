@@ -25,7 +25,7 @@ class LinearLayer_LoRA(nn.Module):
 
         if lora_dim <= 0:
             raise ValueError(
-                "You are training to use LoRA, whose reduced dim should be larger than 1"
+                "You are training to use LoRA, whose reduced dim should be at least 1"
             )
 
         try:
@@ -87,21 +87,23 @@ class LinearLayer_LoRA(nn.Module):
 
 # convert the linear layer to LoRA
 def convert_linear_layer_to_lora(model,
-                                 part_module_name,
+                                 part_modules,
                                  lora_dim=0,
                                  lora_scaling=1,
-                                 lora_droppout=0):
+                                 lora_dropout=0):
     replace_name = []
     for name, module in model.named_modules():
-        if isinstance(module, nn.Linear) and part_module_name in name:
-            replace_name.append(name)
+        for key in part_modules.split(','):
+            if isinstance(module, nn.Linear) and key in name:
+                replace_name.append(name)
+                break
     for name in replace_name:
         module = recursive_getattr(model, name)
         tmp = LinearLayer_LoRA(
-            module.weight, lora_dim, lora_scaling, lora_droppout,
+            module.weight, lora_dim, lora_scaling, lora_dropout,
             module.bias).to(module.weight.device).to(module.weight.dtype)
         recursive_setattr(model, name, tmp)
-    return model
+    return model, replace_name
 
 
 def _z3_params_to_fetch(param_list):

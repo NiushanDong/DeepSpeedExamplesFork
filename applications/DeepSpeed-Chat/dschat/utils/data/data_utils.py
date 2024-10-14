@@ -282,7 +282,10 @@ def create_prompt_dataset(local_rank,
                           max_seq_len,
                           end_of_conversation_token="<|endoftext|>",
                           sft_only_data_path=[],
-                          reload=False):
+                          reload=False,
+                          max_train_samples=-1,
+                          max_eval_samples=-1
+                          ):
     """
     Creates the prompt dataset
     """
@@ -377,6 +380,14 @@ def create_prompt_dataset(local_rank,
                 eval_dataset = ConcatDataset([eval_dataset, sft_eval_dataset])
                 shuffle_idx = get_shuffle_idx(seed, len(eval_dataset))
                 eval_dataset = Subset(eval_dataset, shuffle_idx.tolist())
+        
+        # Limit the number of samples if max_train_samples and max_eval_samples are set
+        if max_train_samples >= 0 and max_train_samples < len(train_dataset):
+            train_dataset = Subset(train_dataset, [i for i in range(max_train_samples)])
+        if max_eval_samples >= 0 and max_eval_samples < len(eval_dataset):
+            eval_dataset = Subset(eval_dataset, [i for i in range(max_eval_samples)])
+        print(f'Subset taken after shuffling with train_samples={len(train_dataset)} and eval_samples={len(eval_dataset)}')
+        
         torch.save(train_dataset, train_fname)
         torch.save(eval_dataset, eval_fname)
     torch.distributed.barrier()
