@@ -88,14 +88,13 @@ def create_hf_model(model_class,
                     ds_config=None,
                     rlhf_training=False,
                     trust_remote_code=False,
-                    dropout=None,
-                    resize_token_embeddings=True):
+                    dropout=None):
     model_config = AutoConfig.from_pretrained(model_name_or_path, trust_remote_code=trust_remote_code)
     configure_dropout(model_config, dropout)
-    print(f"model_config: {model_config}")
 
     # Note: dschf is defined in function scope to avoid global effects
     # https://huggingface.co/docs/transformers/main_classes/deepspeed#nontrainer-deepspeed-integration
+    # 当使用zero-stage-3时，定义dschf，这样from_pretrained不会直接加载模型到gpu，后期用deepspeed wrap之后再将模型分片后加载到各个gpu
     if ds_config is not None and ds_config["zero_optimization"]["stage"] == 3:
         dschf = HfDeepSpeedConfig(ds_config)
     else:
@@ -112,10 +111,7 @@ def create_hf_model(model_class,
 
     model.config.end_token_id = tokenizer.eos_token_id
     model.config.pad_token_id = model.config.eos_token_id
-    if resize_token_embeddings:
-        model.resize_token_embeddings(int(
-            8 *
-        math.ceil(len(tokenizer) / 8.0)))  # make the vocab size multiple of 8
+    model.resize_token_embeddings(int(8 * math.ceil(len(tokenizer) / 8.0)))  # make the vocab size multiple of 8
 
     return model
 
